@@ -7,7 +7,7 @@ import time
 app = Flask(__name__)
 
 # Define parameters
-num_samples = 1000
+num_samples = 1
 time_interval = 1  # in seconds
 data_rate = 1 / time_interval  # data rate per second
 
@@ -19,9 +19,16 @@ humidity_std = 10
 sound_volume_mean = 60
 sound_volume_std = 20
 
+# Initialize counters for anomalies and total data points processed
+total_anomalies_detected = 0
+total_samples_processed = 0
+
 # Generate timestamps
 timestamps = pd.date_range(start=pd.Timestamp.now(), periods=num_samples,
                            freq=f'{time_interval}s')
+
+# List to store detected anomalies
+detected_anomalies = []
 
 
 # Generate synthetic sensor data with more realistic patterns
@@ -87,10 +94,6 @@ def detect_anomalies(sensor_data, sensor_type):
     return anomalies
 
 
-total_samples_processed = 0
-total_anomalies_detected = 0
-
-
 @app.route('/predict', methods=['POST'])
 def predict():
     global total_samples_processed, total_anomalies_detected
@@ -147,7 +150,7 @@ def get_model_performance():
     global total_samples_processed, total_anomalies_detected
 
     anomaly_percentage = (
-                                 total_anomalies_detected / total_samples_processed) * 100\
+                                 total_anomalies_detected / total_samples_processed) * 100 \
         if total_samples_processed > 0 else 0
     performance = {
         'TotalSamplesProcessed': total_samples_processed,
@@ -156,18 +159,6 @@ def get_model_performance():
     }
     return jsonify(performance), 200
 
-
-# This block of code will only be executed if the script is directly run
-if __name__ == "__main__":
-    try:
-        # Run the Flask application using Gunicorn
-        from gunicorn.app.wsgiapp import WSGIApplication
-
-        sys.argv = ["gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "Anomaly_detection:app"]
-        WSGIApplication().run()
-    except KeyboardInterrupt:
-        print("Streaming interrupted. Exiting gracefully...")
-        # Perform cleanup actions here if needed
 
 # Simulate continuous data streaming
 try:
@@ -194,16 +185,24 @@ try:
             all_anomalies = pd.concat([temperature_anomalies, humidity_anomalies,
                                        sound_volume_anomalies]).drop_duplicates()
 
-            # Print detected anomalies
-            print("Detected Anomalies:")
-            print(all_anomalies)
+            total_samples_processed += 1
+            total_anomalies_detected += len(all_anomalies)
 
-        except Exception as e:
-            # Log the error
-            print("An error occurred during data generation or anomaly detection:", e)
+            # Delay to ensure one data point generated per second
+            time.sleep(time_interval)
 
-        # Wait for specified time interval
-        time.sleep(time_interval)
+        except KeyboardInterrupt:
+            raise
+
 except KeyboardInterrupt:
     print("Streaming interrupted. Exiting gracefully...")
-    # Save data to a file or perform any cleanup if needed
+
+# Print detected anomalies after data generation stops
+print("Detected Anomalies:")
+if detected_anomalies:
+    print(pd.concat(detected_anomalies))
+else:
+    print("No anomalies detected.")
+
+print("Total Samples Processed:", total_samples_processed)
+print("Total Anomalies Detected:", total_anomalies_detected)
