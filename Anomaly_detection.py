@@ -145,12 +145,18 @@ def predict():
         return jsonify({'error': error_message}), 500
 
 
+anomaly_percentage = 0  # Initialize anomaly_percentage as a global variable
+# Detect anomalies for each sensor type
+temperature_anomalies = detect_anomalies(sensor_data, 'Temperature')
+humidity_anomalies = detect_anomalies(sensor_data, 'Humidity')
+sound_volume_anomalies = detect_anomalies(sensor_data, 'SoundVolume')
+
+
 @app.route('/model_performance', methods=['GET'])
 def get_model_performance():
     global total_samples_processed, total_anomalies_detected
 
-    anomaly_percentage = (
-                                 total_anomalies_detected / total_samples_processed) * 100 \
+    anomaly_percentage = (total_anomalies_detected / total_samples_processed) * 100 \
         if total_samples_processed > 0 else 0
     performance = {
         'TotalSamplesProcessed': total_samples_processed,
@@ -176,11 +182,6 @@ try:
             # Print the latest data point
             print(sensor_data.tail(1))  # Print the last row (latest data point)
 
-            # Detect anomalies for each sensor type
-            temperature_anomalies = detect_anomalies(sensor_data, 'Temperature')
-            humidity_anomalies = detect_anomalies(sensor_data, 'Humidity')
-            sound_volume_anomalies = detect_anomalies(sensor_data, 'SoundVolume')
-
             # Combine anomalies from all sensor types
             all_anomalies = pd.concat([temperature_anomalies, humidity_anomalies,
                                        sound_volume_anomalies]).drop_duplicates()
@@ -198,11 +199,8 @@ except KeyboardInterrupt:
     print("Streaming interrupted. Exiting gracefully...")
 
 # Print detected anomalies after data generation stops
-print("Detected Anomalies:")
-if detected_anomalies:
-    print(pd.concat(detected_anomalies))
-else:
-    print("No anomalies detected.")
-
 print("Total Samples Processed:", total_samples_processed)
 print("Total Anomalies Detected:", total_anomalies_detected)
+print("Temperature anomalies detected:", len(temperature_anomalies))
+print("Humidity anomalies detected:", len(humidity_anomalies))
+print("Sound volume anomalies detected:", len(sound_volume_anomalies))
