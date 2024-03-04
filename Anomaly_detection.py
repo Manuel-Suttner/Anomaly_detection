@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 # Define parameters
 num_samples = 1
-time_interval = 1  # in seconds
+time_interval = 0.1  # in seconds
 data_rate = 1 / time_interval  # data rate per second
 
 # Define parameters for generating synthetic sensor data
@@ -123,18 +123,12 @@ def predict():
         response = {
             'Temperature': [{
                 'Timestamp': str(row['Timestamp']),
-                'ConfidenceScore': (row['Temperature'] - temperature_data['Temperature'].mean()) / temperature_data[
-                    'Temperature'].std()
             } for _, row in temperature_anomalies.iterrows()],
             'Humidity': [{
                 'Timestamp': str(row['Timestamp']),
-                'ConfidenceScore': (row['Humidity'] - humidity_data['Humidity'].mean()) / humidity_data[
-                    'Humidity'].std()
             } for _, row in humidity_anomalies.iterrows()],
             'SoundVolume': [{
                 'Timestamp': str(row['Timestamp']),
-                'ConfidenceScore': (row['SoundVolume'] - sound_volume_data['SoundVolume'].mean()) / sound_volume_data[
-                    'SoundVolume'].std()
             } for _, row in sound_volume_anomalies.iterrows()]
         }
 
@@ -204,3 +198,7 @@ print("Total Anomalies Detected:", total_anomalies_detected)
 print("Temperature anomalies detected:", len(temperature_anomalies))
 print("Humidity anomalies detected:", len(humidity_anomalies))
 print("Sound volume anomalies detected:", len(sound_volume_anomalies))
+
+# Print anomaly percentage
+anomaly_percentage = 0 if total_samples_processed == 0 else (total_anomalies_detected / total_samples_processed) * 100
+print("Anomaly percentage:", anomaly_percentage)
